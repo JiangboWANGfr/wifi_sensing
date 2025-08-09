@@ -20,6 +20,8 @@ import scipy.io as sio
 from os import listdir
 import pickle
 from os import path
+import scipy.io as sio
+import numpy as np
 
 
 def hampel_filter(input_matrix, window_size, n_sigmas=3):
