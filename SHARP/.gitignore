@@ -1,7 +1,0 @@
-
-input_files/*
-.idea/*
-*.pdf
-__pycache__/
-*.py[cod]
-*$py.class
