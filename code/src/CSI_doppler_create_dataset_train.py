@@ -21,7 +21,7 @@ import numpy as np
 import pickle
 import math as mt
 import shutil
-from dataset_utility import create_windows_antennas, convert_to_number
+from utils.dataset_utility import create_windows_antennas, convert_to_number
 
 
 if __name__ == '__main__':

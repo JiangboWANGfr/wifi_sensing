@@ -6,6 +6,7 @@ import glob
 import subprocess
 import threading
 from pathlib import Path
+import psutil
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,23 +29,20 @@ class SHARPPipelineApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("SHARP Signal Processing Pipeline UI")
+        self.resize(800, 400)  # 修改窗口宽高，这里是宽1200px，高800px
 
-        # Defaults
-        self.dataset_folder = Path(
-            "/Users/kyungminhong/Library/CloudStorage/OneDrive-UniversityofLuxembourg/"
-            "Moein AHMADI's files - wifisensing/WiFisensing/dataset"
-        )
-        self.python_code_folder = Path(
-            "/Users/kyungminhong/Library/CloudStorage/OneDrive-UniversityofLuxembourg/"
-            "PhD_project/WiFisensing/SHARP/Python_code"
-        )
+        # 当前工作目录
+        cwd = Path.cwd()
 
-        # Important: we treat these as ROOTS (no subdir at the end)
-        self.phase_output_root = self.python_code_folder / \
-            "01_phase_sanitization" / "processed_phase"
-        self.doppler_output_root = self.python_code_folder / "02_doppler" / "doppler_traces"
+        # 默认路径修改
+        self.dataset_folder = cwd / "datasets"
+        self.python_code_folder = cwd / "code" / "src"
 
-        self.subdirs = "AR-1a"  # dataset subdir name
+        # Important: 
+        self.phase_output_root = cwd / "results" / "processed_phase"
+        self.doppler_output_root = cwd / "results" / "doppler_traces"
+
+        self.subdirs = "S1a"
 
         self.initUI()
         self.signals = WorkerSignals()
@@ -67,15 +65,15 @@ class SHARPPipelineApp(QMainWindow):
             s, "SHARP Python Code Folder:", self.python_code_folder)
 
         self.phase_output_input = QLineEdit(str(self.phase_output_root))
-        s.addWidget(QLabel("Processed Phase Output Folder (ROOT):"))
+        s.addWidget(QLabel("Processed Phase Output Folder:"))
         s.addWidget(self.phase_output_input)
 
         self.doppler_output_input = QLineEdit(str(self.doppler_output_root))
-        s.addWidget(QLabel("Doppler Output Folder (ROOT):"))
+        s.addWidget(QLabel("Doppler Output Folder:"))
         s.addWidget(self.doppler_output_input)
 
         self.subdirs_input = QLineEdit(self.subdirs)
-        s.addWidget(QLabel("Subdirectories (comma-separated, e.g. AR-1a):"))
+        s.addWidget(QLabel("Datasets Subdirectories:"))
         s.addWidget(self.subdirs_input)
 
         row = QHBoxLayout()
@@ -95,7 +93,9 @@ class SHARPPipelineApp(QMainWindow):
         s.addWidget(self.streams_input)
 
         self.cores_input = QSpinBox()
-        self.cores_input.setValue(4)
+        # 获取物理核心数，获取不到就用1
+        physical_cores = psutil.cpu_count(logical=False) or 1
+        self.cores_input.setValue(physical_cores)
         s.addWidget(QLabel("Number of CPU Cores:"))
         s.addWidget(self.cores_input)
 

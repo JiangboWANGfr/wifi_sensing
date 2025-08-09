@@ -19,8 +19,8 @@ import numpy as np
 import pickle
 from sklearn.metrics import confusion_matrix
 import os
-from dataset_utility import create_dataset_single, expand_antennas
-from network_utility import *
+from utils.dataset_utility import create_dataset_single, expand_antennas
+from utils.network_utility import *
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
 

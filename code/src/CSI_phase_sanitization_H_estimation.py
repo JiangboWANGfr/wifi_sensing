@@ -15,10 +15,10 @@
 """
 
 import argparse
-from optimization_utility import *
+from utils.optimization_utility import *
 from os import listdir
 import pickle
-from plots_utility import *
+from utils.plots_utility import *
 
 
 if __name__ == '__main__':

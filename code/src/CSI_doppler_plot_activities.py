@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import pickle
 from os import listdir
-from plots_utility import plt_fft_doppler_activities, plt_fft_doppler_activities_compact, \
+from utils.plots_utility import plt_fft_doppler_activities, plt_fft_doppler_activities_compact, \
     plt_fft_doppler_activity_single, plt_fft_doppler_activities_compact_2
 
 

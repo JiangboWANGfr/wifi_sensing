@@ -19,7 +19,7 @@ import numpy as np
 import pickle
 import math as mt
 from os import listdir
-from plots_utility import plt_doppler_antennas
+from utils.plots_utility import plt_doppler_antennas
 
 
 if __name__ == '__main__':

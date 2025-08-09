@@ -17,7 +17,7 @@
 import argparse
 import numpy as np
 import pickle
-from plots_utility import plt_confusion_matrix
+from utils.plots_utility import plt_confusion_matrix
 
 
 if __name__ == '__main__':

@@ -19,7 +19,7 @@ import numpy as np
 import pickle
 from sklearn.metrics import confusion_matrix
 import os
-from dataset_utility import create_dataset_single, expand_antennas
+from utils.dataset_utility import create_dataset_single, expand_antennas
 from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import tensorflow as tf
