@@ -23,6 +23,9 @@ from utils.dataset_utility import create_dataset_single, expand_antennas
 from utils.network_utility import *
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
+import warnings
+from sklearn.exceptions import UndefinedMetricWarning
+warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -53,7 +56,10 @@ if __name__ == '__main__':
         activities.append(lab_act)
     activities = np.asarray(activities)
 
-    name_base = args.name_base
+    output_cache_path = args.dir +"../outputs/cache/" 
+    if not os.path.exists(output_cache_path):
+        os.makedirs(output_cache_path)
+    name_base = output_cache_path + args.name_base
     if os.path.exists(name_base + '_' + str(csi_act) + '_cache_train.data-00000-of-00001'):
         os.remove(name_base + '_' + str(csi_act) + '_cache_train.data-00000-of-00001')
         os.remove(name_base + '_' + str(csi_act) + '_cache_train.index')
@@ -258,7 +264,7 @@ if __name__ == '__main__':
                            'recall_max_merge': recall_max_merge,
                            'fscore_max_merge': fscore_max_merge}
 
-    name_file = './outputs/test_' + str(csi_act) + '_' + subdirs_training + '_band_' + str(bandwidth) + '_subband_' + \
+    name_file = args.dir + '../outputs/test_' + str(csi_act) + '_' + subdirs_training + '_band_' + str(bandwidth) + '_subband_' + \
                 str(sub_band) + suffix
     with open(name_file, "wb") as fp:  # Pickling
         pickle.dump(metrics_matrix_dict, fp)
@@ -313,7 +319,7 @@ if __name__ == '__main__':
     metrics_matrix_dict = {'average_accuracy_change_num_ant': average_accuracy_change_num_ant,
                            'average_fscore_change_num_ant': average_fscore_change_num_ant}
 
-    name_file = './outputs/change_number_antennas_test_' + str(csi_act) + '_' + subdirs_training + '_band_' + \
+    name_file = args.dir + '../outputs/change_number_antennas_test_' + str(csi_act) + '_' + subdirs_training + '_band_' + \
                 str(bandwidth) + '_subband_' + str(sub_band) + '.txt'
     with open(name_file, "wb") as fp:  # Pickling
         pickle.dump(metrics_matrix_dict, fp)

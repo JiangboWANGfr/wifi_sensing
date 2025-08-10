@@ -32,7 +32,7 @@ class SHARPPipelineApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("SHARP Signal Processing Pipeline UI")
-        self.resize(1200, 850)
+        self.resize(1200, 1200)
 
         # ---- Stable project root based on this file's location ----
         self.project_root = Path(__file__).resolve().parent
@@ -167,7 +167,7 @@ class SHARPPipelineApp(QMainWindow):
         rlayout.addWidget(self.log_text)
         splitter.addWidget(right)
 
-        splitter.setSizes([600, 650])
+        splitter.setSizes([600, 900])
 
     def _folder_row(self, parent_layout, label, default_path, on_changed=None):
         row = QHBoxLayout()
@@ -494,6 +494,7 @@ class SHARPPipelineApp(QMainWindow):
 
         threading.Thread(target=worker, daemon=True).start()
 
+
     def run_create_datasets(self):
         base = Path(self.python_code_folder_input.text())
         doppler_root = Path(self.doppler_output_input.text())
@@ -502,12 +503,21 @@ class SHARPPipelineApp(QMainWindow):
             QMessageBox.critical(
                 self, "Error", f"Doppler path does not exist:\n{doppler_root}")
             return
+        # python CSI_doppler_create_dataset_train.py ./doppler_traces/ S1a,S1b,S1c 31 1 340 30 E,L,W,R,J 4
         cmd = [
             sys.executable,
             str(base / "CSI_doppler_create_dataset_train.py"),
-            str(doppler_root), subdir, "31", "1", "340", "30", "E,L,W,R,J", "4"
+            str(doppler_root)+'/', subdir, "31", "1", "340", "30", "E,L,W,R,J1,J2", "4"
         ]
-        self._run(cmd, "Creating Dataset", cwd=str(base))
+
+        def worker():
+            self.signals.progress_text.emit("Creating dataset...")
+            self.signals.progress_value.emit(0)
+            self._run(cmd, "Creating Dataset", cwd=str(base))
+            self.signals.progress_text.emit("Dataset creation complete.")
+            self.signals.progress_value.emit(100)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def run_train_model(self):
         base = Path(self.python_code_folder_input.text())
@@ -517,13 +527,22 @@ class SHARPPipelineApp(QMainWindow):
             QMessageBox.critical(
                 self, "Error", f"Doppler path does not exist:\n{doppler_root}")
             return
+        # python CSI_network.py ./doppler_traces/ S1a 100 340 1 32 4 single_ant E,L,W,R,J
         cmd = [
             sys.executable,
             str(base / "CSI_network.py"),
-            str(doppler_root), subdir, "100", "340", "1", "32", "4",
-            "single_ant", "E,L,W,R,J", "--bandwidth", "80", "--sub_band", "1"
+            str(doppler_root)+'/', subdir, "100", "340", "1", "32", "4",
+            "single_ant", "E,L,W,R,J1,J2"
         ]
-        self._run(cmd, "Training Model", cwd=str(base))
+
+        def worker():
+            self.signals.progress_text.emit("Training model...")
+            self.signals.progress_value.emit(0)
+            self._run(cmd, "Training Model", cwd=str(base))
+            self.signals.progress_text.emit("Training complete.")
+            self.signals.progress_value.emit(100)
+
+        threading.Thread(target=worker, daemon=True).start()
 
 
 if __name__ == "__main__":

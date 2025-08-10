@@ -170,8 +170,15 @@ if __name__ == '__main__':
                                                                        stride_length, remove_mean=False)
 
                 num_windows = np.floor((np.asarray(list_sets_lengths[set_idx]) - window_length) / stride_length + 1)
+                print("window_length =", window_length, "stride =", stride_length)
+                print("train lens:", length_train[:10], "… total:", len(length_train))
+                print("val   lens:", length_val[:10],   "… total:", len(length_val))
+                print("test  lens:", length_test[:10],  "… total:", len(length_test))
+
                 if not len(csi_matrices_set) == np.sum(num_windows):
                     print('ERROR - shapes mismatch')
+                    
+
 
                 names_set = []
                 suffix = '.txt'
