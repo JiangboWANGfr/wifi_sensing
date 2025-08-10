@@ -14,6 +14,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -26,7 +27,8 @@ rcParams['font.serif'] = 'Times'
 rcParams['text.usetex'] = 'true'
 rcParams['text.latex.preamble'] = r'\usepackage{newtxmath}'
 rcParams['font.size'] = 16
-
+# don't using latex
+rcParams['text.usetex'] = False
 
 def plot_r_angle(complex_opt_r, start_plot, end_plot, delta_t, save_name):
     plt.figure()

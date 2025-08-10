@@ -32,7 +32,7 @@ class SHARPPipelineApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("SHARP Signal Processing Pipeline UI")
-        self.resize(1200, 800)
+        self.resize(1200, 850)
 
         # ---- Stable project root based on this file's location ----
         self.project_root = Path(__file__).resolve().parent
@@ -42,7 +42,7 @@ class SHARPPipelineApp(QMainWindow):
         self.python_code_folder = self.project_root / "code" / "src"
 
         self.results_output_root = self.project_root / "results"
-        self.phase_output_root = self.project_root / "results" / "processed_phase"
+        self.phase_output_root = self.project_root / "results" / "phase_processing" / "processed_phase"
         self.doppler_output_root = self.project_root / "results" / "doppler_traces"
 
         # UI state
@@ -149,8 +149,9 @@ class SHARPPipelineApp(QMainWindow):
 
         # Pipeline buttons
         self._pipeline_button(s, "1. Run Phase Sanitization", self.run_phase_sanitization)
-        self._pipeline_button(s, "1.1 Plot Phase Information", self.plot_phase_information)
+        self._pipeline_button(s, "1.5 Plot Phase Information", self.plot_phase_information)
         self._pipeline_button(s, "2. Run Doppler Computation", self.run_doppler_computation)
+        self._pipeline_button(s, "2.5 Plot Doppler Information", self.plot_doppler_information)
         self._pipeline_button(s, "3. Create Dataset (Train)", self.run_create_datasets)
         self._pipeline_button(s, "4. Train HAR Model", self.run_train_model)
 
@@ -166,7 +167,7 @@ class SHARPPipelineApp(QMainWindow):
         rlayout.addWidget(self.log_text)
         splitter.addWidget(right)
 
-        splitter.setSizes([600, 600])
+        splitter.setSizes([600, 650])
 
     def _folder_row(self, parent_layout, label, default_path, on_changed=None):
         row = QHBoxLayout()
@@ -425,7 +426,8 @@ class SHARPPipelineApp(QMainWindow):
             self._run(hest_cmd, "H-estimation (all activities)", str(base))
             self.signals.progress_text.emit(f"Running on: streams: {streams}, cores: {cores}")
             self._run(recon_cmd, f"Reconstruction signal", cwd=str(base))
-            
+            self.signals.progress_text.emit(f"Phase reconstruction complete.")
+            self.signals.progress_value.emit(100)
 
 
         threading.Thread(target=run_phase_pipeline, daemon=True).start()
@@ -449,27 +451,46 @@ class SHARPPipelineApp(QMainWindow):
         cmd = [
             sys.executable,
             str(base / "CSI_doppler_computation.py"),
-            str(out_phase_root), subdir, str(doppler_root),
+            str(out_phase_root) + '/' , subdir, str(doppler_root)+'/',
             "800", "800", "31", "1", "-1.2"
         ]
 
         def worker():
             self.signals.progress_text.emit("Doppler Computation started...")
-            self.signals.progress_value.emit(0)
-            p = subprocess.Popen(cmd, cwd=str(base), stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT, universal_newlines=True)
-            for line in iter(p.stdout.readline, ''):
-                line = line.strip()
-                self.signals.progress_text.emit(line)
-                m = re.search(r'\[(\d+)/(\d+)\]', line)
-                if m:
-                    cur, tot = int(m.group(1)), int(m.group(2))
-                    pct = int((cur / tot) * 100)
-                    self.signals.progress_value.emit(pct)
-            p.stdout.close()
-            p.wait()
-            self.signals.progress_value.emit(100)
+            self._run(cmd, "Doppler Computation", cwd=str(base))
             self.signals.progress_text.emit("Doppler Computation complete.")
+            self.signals.progress_value.emit(100)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def plot_doppler_information(self):
+        base = Path(self.python_code_folder_input.text())
+        doppler_root = Path(self.doppler_output_input.text())
+        subdir = self.subdir_current or ""
+        
+        # python CSI_doppler_plots_antennas.py <'directory of the reconstructed data'> <'sub-directory of data'> <'length along the feature dimension (height)'> <'sliding length'> <'labels of the activities to be considered'> <'last index to plot'>
+        # python CSI_doppler_plots_activities.py <'directory of the reconstructed data'> <'sub-directory of data'> <'length along the feature dimension (height)'> <'sliding length'> <'labels of the activities to be considered'> <'first index to plot'> <'last index to plot'>
+
+        cmd_plots_antennas = [
+            sys.executable,
+            str(base / "CSI_doppler_plots_antennas.py"),
+            str(doppler_root)+ '/', subdir, "100", "1", "E,L,W,R,J1", "20000"
+        ]
+        cmd_plots_activities = [
+            sys.executable,
+            str(base / "CSI_doppler_plot_activities.py"),
+            str(doppler_root)+'/', subdir, "100", "1",  "E,L,W,R,J1", "570", "1070"
+        ]
+        
+        def worker():
+            self.signals.progress_text.emit("Doppler Plotting started...")
+            self._run(cmd_plots_antennas, "Doppler Plotting - Antennas", cwd=str(base))
+            self.signals.progress_text.emit("Doppler Plotting - Antennas complete.")
+            self.signals.progress_value.emit(50)
+            self.signals.progress_text.emit("Doppler Plotting - Activities started...")
+            self._run(cmd_plots_activities, "Doppler Plotting - Activities", cwd=str(base))
+            self.signals.progress_text.emit("Doppler Plotting complete.")
+            self.signals.progress_value.emit(100)
 
         threading.Thread(target=worker, daemon=True).start()
 

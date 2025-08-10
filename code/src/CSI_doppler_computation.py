@@ -58,8 +58,9 @@ if __name__ == '__main__':
 
     for subdir in list_subdir.split(','):
         path_doppler = args.dir_doppler + subdir
+        print(f"Processing Doppler data for subdir: {subdir}")
         if not os.path.exists(path_doppler):
-            os.mkdir(path_doppler)
+            os.makedirs(path_doppler)
 
         exp_dir = args.dir + subdir + '/'
 

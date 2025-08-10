@@ -25,8 +25,7 @@ PLOTS.mkdir(parents=True, exist_ok=True)
 RAW_MAT = ROOT / "datasets" / SUBDIR / f"{SUBDIR}_{ACT}.mat"
 PRE_TXT = ROOT / "results" / "phase_processing" / \
     "signal_preprocessing" / f"signal_{SUBDIR}_{ACT}.txt"
-PRO_MAT = ROOT / "results" / "processed_phase" / \
-    SUBDIR / f"{SUBDIR}_{ACT}_stream_{STREAM}.mat"
+PRO_MAT = ROOT / "results" / "phase_processing" /"processed_phase" / SUBDIR / f"{SUBDIR}_{ACT}_stream_{STREAM}.mat"
 tag = f"{SUBDIR}_{ACT}_s{STREAM}"
 
 # ========== 读取 ==========

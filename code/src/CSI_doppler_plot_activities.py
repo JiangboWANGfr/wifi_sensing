@@ -63,21 +63,21 @@ if __name__ == '__main__':
 
         traces_activities.append(stft_antennas)
 
-    name_p = './plots/csi_doppler_activities_' + args.sub_dir + '.pdf'
+    name_p = args.dir +'../plots/csi_doppler_activities_' + args.sub_dir + '.pdf'
     delta_v = round(v_light / (Tc * fc * feature_length), 3)
     antenna = 0
     plt_fft_doppler_activities(traces_activities, antenna, activities, sliding, delta_v, name_p)
 
-    name_p = './plots/csi_doppler_activities_' + '_' + args.sub_dir + '_compact.pdf'
+    name_p = args.dir +'../plots/csi_doppler_activities_' + '_' + args.sub_dir + '_compact.pdf'
     plt_fft_doppler_activities_compact(traces_activities, antenna, activities, sliding, delta_v, name_p)
 
-    traces_activities_reduced = traces_activities
+    traces_activities_reduced = traces_activities[:]
     del traces_activities_reduced[2]
-    name_p = './plots/csi_doppler_activities_' + '_' + args.sub_dir + '_compact_2.pdf'
+    name_p = args.dir +'../plots/csi_doppler_activities_' + '_' + args.sub_dir + '_compact_2.pdf'
     plt_fft_doppler_activities_compact_2(traces_activities_reduced, antenna,
                                          np.asarray(['empty', 'sitting', 'running', 'jumping']),
                                          sliding, delta_v, name_p)
 
-    name_p = './plots/csi_doppler_single_act.pdf'
+    name_p = args.dir +'../plots/csi_doppler_single_act.pdf'
     antenna = 1
     plt_fft_doppler_activity_single(traces_activities[4], antenna, sliding, delta_v, name_p)

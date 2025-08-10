@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
             stft_antennas.append(stft_sum_1_log)
 
-        name_p = './plots/csi_doppler_activity_' + args.sub_dir + '_' + activity + '.png'
+        name_p = args.dir +'../plots/csi_doppler_activity_' + args.sub_dir + '_' + activity + '.png'
         delta_v = round(v_light / (Tc * fc * feature_length), 3)
 
         plt_doppler_antennas(stft_antennas, sliding, delta_v, name_p)
