@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from utils import plots_utility as PU  # 只用这个库出图
 import pickle
 import numpy as np
 from pathlib import Path
@@ -8,6 +7,7 @@ from scipy.io import loadmat
 # 如果你的 plots_utility 在 code/src/utils 下：
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent / "code" / "src"))
+from utils import plots_utility as PU  # 只用这个库出图
 
 # ========== 配置 ==========
 ROOT = Path(".")         # 项目根

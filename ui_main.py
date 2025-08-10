@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
     QGroupBox, QComboBox, QMessageBox, QProgressBar, QTextEdit, QSplitter, QSizePolicy
 )
 from PyQt5.QtCore import QObject, pyqtSignal
-
+from PyQt5 import QtCore, QtWidgets
 import threading
 
 
@@ -53,6 +53,7 @@ class SHARPPipelineApp(QMainWindow):
         self.signals.progress_value.connect(self.progress_bar.setValue)
         # show brief status AND full log
         self.signals.progress_text.connect(self.status_label.setText)
+        
         self.signals.progress_text.connect(self.append_log)
         
 
@@ -159,7 +160,9 @@ class SHARPPipelineApp(QMainWindow):
         rlayout.addWidget(QLabel("Run Output"))
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
-        self.log_text.setLineWrapMode(QTextEdit.NoWrap)
+        # self.log_text.setLineWrapMode(QTextEdit.NoWrap)
+        self.log_text.setLineWrapMode(QTextEdit.WidgetWidth)
+        # Set long text to scroll
         rlayout.addWidget(self.log_text)
         splitter.addWidget(right)
 
@@ -253,16 +256,16 @@ class SHARPPipelineApp(QMainWindow):
                     self.signals.progress_text.emit(line)
             p.stdout.close()
             p.wait()
-            if p.returncode == 0:
-                self.status_label.setText(msg + " complete.")
-            else:
+            if p.returncode != 0:
                 self.status_label.setText(f"{msg} FAILED ({p.returncode})")
-                QMessageBox.critical(self, "Error",
-                                    f"Command failed:\n{' '.join(map(str, cmd_list))}\n\nReturn code: {p.returncode}")
+                self._show_message_on_main(
+                    "critical",
+                    "Error",
+                    f"Command failed:\n{' '.join(map(str, cmd_list))}\n\nReturn code: {p.returncode}")
+
         except Exception as e:
             self.status_label.setText(msg + f" FAILED ({e})")
-            QMessageBox.critical(self, "Error", str(e))
-
+            self._show_message_on_main("critical", "Error", str(e))
 
     def get_files_in_subdir(self):
         root = Path(self.dataset_folder_input.text())
@@ -326,7 +329,17 @@ class SHARPPipelineApp(QMainWindow):
             QMessageBox.critical(self, "Error", str(e))
 
     # ------------- Pipeline -------------
-    
+    def _show_message_on_main(self, kind, title, text):
+        # kind: "info" | "warning" | "critical"
+
+        def do_show():
+            if kind == "info":
+                QtWidgets.QMessageBox.information(self, title, text)
+            elif kind == "warning":
+                QtWidgets.QMessageBox.warning(self, title, text)
+            else:
+                QtWidgets.QMessageBox.critical(self, title, text)
+        QtCore.QTimer.singleShot(0, do_show)  # 切回主线程队列执行
     def run_phase_sanitization(self):
         """
         Updated to run scripts from code/src (no nested folders). We set cwd to code/src
@@ -400,17 +413,19 @@ class SHARPPipelineApp(QMainWindow):
         recon_cmd = [
             sys.executable,
             str(base / "CSI_phase_sanitization_signal_reconstruction.py"),
+            str(phase_processing),
             str(""),
             str(out_dir),
             str(streams), str(cores), "0", "-1"
         ]
         def run_phase_pipeline():
-            self.signals.progress_text.emit(f"Running: {' '.join(preprocess_cmd)}")
+            self.signals.progress_text.emit(f"Running on: streams: {streams}, cores: {cores}")
             self._run(preprocess_cmd, "Preprocessing (all activities)", str(base))
-            self.signals.progress_text.emit(f"Running: {' '.join(hest_cmd)}")
+            self.signals.progress_text.emit(f"Running on: streams: {streams}, cores: {cores}")
             self._run(hest_cmd, "H-estimation (all activities)", str(base))
-            self.signals.progress_text.emit(f"Running: {' '.join(recon_cmd)}")
-            # self._run(recon_cmd, f"Reconstruction signal", cwd=str(base))
+            self.signals.progress_text.emit(f"Running on: streams: {streams}, cores: {cores}")
+            self._run(recon_cmd, f"Reconstruction signal", cwd=str(base))
+            
 
 
         threading.Thread(target=run_phase_pipeline, daemon=True).start()

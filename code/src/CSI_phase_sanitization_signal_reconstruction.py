@@ -45,20 +45,20 @@ if __name__ == '__main__':
             names.append(all_files[i][:-4])
 
     for name in names:
-        print("reconstructing:", name, end=' ')
         name_f = name[10:] + '.mat'
         stop = False
         sub_dir_name = name_f[0:3] # S1a ... the folder's name
         subdir_path = save_dir + sub_dir_name
 
         complete_path = subdir_path + '/' + name_f
-        print(complete_path)
         if path.isfile(complete_path):
             stop = True
 
         if stop:
-            print('Already processed')
+            print(f"File {name_f:<24} already exists, skipping reconstruction.")
             continue
+        else:
+            print(f"Reconstructing: {name:<24}")
 
         if not os.path.exists(subdir_path):
             os.mkdir(subdir_path)
