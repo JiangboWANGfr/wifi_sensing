@@ -42,6 +42,7 @@ def hampel_filter(input_matrix, window_size, n_sigmas=3):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('output_dir', help='Output directory for processed files')
     parser.add_argument('dir', help='Directory of data')
     parser.add_argument('all_dir', help='All the files in the directory, default no', type=int, default=0)
     parser.add_argument('name', help='Name of experiment file')
@@ -62,8 +63,9 @@ if __name__ == '__main__':
     else:
         names.append(args.name)
 
+    print('Processing files:', names)
     for name in names:
-        name_file = './phase_processing/signal_' + name + '.txt'
+        name_file = args.output_dir + '/signal_' + name + '.txt'
         if path.exists(name_file):
             print('Already processed')
             continue
@@ -96,6 +98,6 @@ if __name__ == '__main__':
 
             signal_complete[:, :, stream] = H_m.T
 
-        name_file = './phase_processing/signal_' + name + '.txt'
+        name_file = args.output_dir + '/signal_' + name + '.txt'
         with open(name_file, "wb") as fp:  # Pickling
             pickle.dump(signal_complete, fp)
