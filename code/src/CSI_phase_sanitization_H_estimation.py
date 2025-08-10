@@ -16,13 +16,16 @@
 
 import argparse
 from utils.optimization_utility import *
-from os import listdir
+from os import listdir, path
 import pickle
 from utils.plots_utility import *
+import os 
 
+from utils.results_path import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('result_dir', help='Directory to save results')
     parser.add_argument('dir', help='Directory of data')
     parser.add_argument('all_dir', help='All the files in the directory, default no', type=int, default=0)
     parser.add_argument('name', help='Name of experiment file')
@@ -33,6 +36,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     exp_save_dir = args.dir
+    input_signal_dir = get_signal_preprocessing_result_dir(args)
+    result_dir = get_h_estimation_result_dir(args)
+    if not path.exists(result_dir):
+        os.makedirs(result_dir)
     names = []
 
     if args.all_dir:
@@ -44,8 +51,8 @@ if __name__ == '__main__':
     else:
         names.append(args.name)
 
-    for name in names:
-        name_file = './phase_processing/signal_' + name + '.txt'
+    for idx_name, name in enumerate(names, start=1):
+        name_file = input_signal_dir + '/signal_' + name + '.txt'
         with open(name_file, "rb") as fp:  # Pickling
             signal_complete = pickle.load(fp)
 
@@ -107,12 +114,15 @@ if __name__ == '__main__':
         zeros_nm_matr = np.zeros(n + m)
 
         for stream in range(0, 4):
-            name_file = './phase_processing/r_vector' + name + '_stream_' + str(stream) + '.txt'
+            name_file = result_dir + '/r_vector_' + name + '_stream_' + str(stream) + '.txt'
             signal_considered = signal_complete[:, start_r:end_r, stream]
             r_optim = np.zeros((r_length, end_r - start_r), dtype=complex)
             Tr_matrix = np.zeros((frequency_vector_complete.shape[0], end_r - start_r), dtype=complex)
 
             for time_step in range(end_r - start_r):
+                if time_step % 100 == 0:
+                    print(
+                        f'{name} {idx_name}/{len(names)}: Processing time step {time_step + 1} / {end_r - start_r} for stream {stream+1} / 4', flush=True)
                 signal_time = signal_considered[:, time_step]
                 complex_opt_r = lasso_regression_osqp_fast(signal_time, T_matrix, select_subcarriers, row_T, col_T,
                                                            Im, Onm, P, q, A2, A3, ones_n_matr, zeros_n_matr,
@@ -165,10 +175,10 @@ if __name__ == '__main__':
                 end_r_opt = start_r_opt + complex_opt_r_refined.shape[0]
                 r_optim[start_r_opt:end_r_opt, time_step] = complex_opt_r_refined
 
-            name_file = './phase_processing/r_vector_' + name + '_stream_' + str(stream) + '.txt'
+            name_file = result_dir + '/r_vector_' + name + '_stream_' + str(stream) + '.txt'
             with open(name_file, "wb") as fp:  # Pickling
                 pickle.dump(r_optim, fp)
 
-            name_file = './phase_processing/Tr_vector_' + name + '_stream_' + str(stream) + '.txt'
+            name_file = result_dir + '/Tr_vector_' + name + '_stream_' + str(stream) + '.txt'
             with open(name_file, "wb") as fp:  # Pickling
                 pickle.dump(Tr_matrix, fp)

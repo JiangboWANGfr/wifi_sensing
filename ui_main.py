@@ -15,9 +15,12 @@ from scipy.io import loadmat
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit, QPushButton, QLabel, QSpinBox, QFileDialog,
-    QGroupBox, QComboBox, QMessageBox, QProgressBar, QTextEdit, QSplitter
+    QGroupBox, QComboBox, QMessageBox, QProgressBar, QTextEdit, QSplitter, QSizePolicy
 )
 from PyQt5.QtCore import QObject, pyqtSignal
+
+import threading
+
 
 
 class WorkerSignals(QObject):
@@ -29,7 +32,7 @@ class SHARPPipelineApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("SHARP Signal Processing Pipeline UI")
-        self.resize(900, 520)
+        self.resize(1200, 800)
 
         # ---- Stable project root based on this file's location ----
         self.project_root = Path(__file__).resolve().parent
@@ -51,6 +54,7 @@ class SHARPPipelineApp(QMainWindow):
         # show brief status AND full log
         self.signals.progress_text.connect(self.status_label.setText)
         self.signals.progress_text.connect(self.append_log)
+        
 
         # Initial population of subdir dropdown + files
         self.refresh_subdirs()
@@ -130,6 +134,10 @@ class SHARPPipelineApp(QMainWindow):
 
         # Status + Progress
         self.status_label = QLabel("Status: Ready.")
+        # 水平方向可伸缩，垂直方向固定
+        self.status_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # 长信息自动换行
+        self.status_label.setWordWrap(True)
         s.addWidget(self.status_label)
 
         self.progress_bar = QProgressBar()
@@ -157,11 +165,13 @@ class SHARPPipelineApp(QMainWindow):
         rlayout.addWidget(self.log_text)
         splitter.addWidget(right)
 
-        splitter.setSizes([600, 300])
+        splitter.setSizes([600, 600])
 
     def _folder_row(self, parent_layout, label, default_path, on_changed=None):
         row = QHBoxLayout()
         inp = QLineEdit(str(default_path))
+        # read-only to prevent user edits
+        inp.setReadOnly(True)
         browse = QPushButton("Browse")
         parent_layout.addWidget(QLabel(label))
         row.addWidget(inp)
@@ -224,13 +234,37 @@ class SHARPPipelineApp(QMainWindow):
     # ------------- Helpers -------------
     def _run(self, cmd_list, msg, cwd=None):
         self.status_label.setText(msg + "...")
+        env = os.environ.copy()
+        env['PYTHONPATH'] = str(self.python_code_folder) + \
+            os.pathsep + env.get('PYTHONPATH', '')
+        env.setdefault("PYTHONUNBUFFERED", "1")
+        # 若是 python 可加 -u 取消缓冲
+        if isinstance(cmd_list[0], str) and os.path.basename(cmd_list[0]).startswith("python"):
+                cmd_list = [cmd_list[0], "-u"] + cmd_list[1:]
+
+
         try:
-            subprocess.run(cmd_list, cwd=cwd, check=True)
-            self.status_label.setText(msg + " complete.")
-        except subprocess.CalledProcessError as e:
-            self.status_label.setText(msg + f" FAILED ({e.returncode})")
-            QMessageBox.critical(
-                self, "Error", f"Command failed:\n{' '.join(map(str, cmd_list))}\n\n{e}")
+            p = subprocess.Popen(
+                cmd_list, cwd=cwd, env=env,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                universal_newlines=True, bufsize=1
+            )
+            for line in iter(p.stdout.readline, ''):
+                line = line.rstrip()
+                if line:
+                    self.signals.progress_text.emit(line)
+            p.stdout.close()
+            p.wait()
+            if p.returncode == 0:
+                self.status_label.setText(msg + " complete.")
+            else:
+                self.status_label.setText(f"{msg} FAILED ({p.returncode})")
+                QMessageBox.critical(self, "Error",
+                                    f"Command failed:\n{' '.join(map(str, cmd_list))}\n\nReturn code: {p.returncode}")
+        except Exception as e:
+            self.status_label.setText(msg + f" FAILED ({e})")
+            QMessageBox.critical(self, "Error", str(e))
+
 
     def get_files_in_subdir(self):
         root = Path(self.dataset_folder_input.text())
@@ -294,6 +328,7 @@ class SHARPPipelineApp(QMainWindow):
             QMessageBox.critical(self, "Error", str(e))
 
     # ------------- Pipeline -------------
+    
     def run_phase_sanitization(self):
         """
         Updated to run scripts from code/src (no nested folders). We set cwd to code/src
@@ -326,44 +361,61 @@ class SHARPPipelineApp(QMainWindow):
             str(base / "CSI_phase_sanitization_H_estimation.py"),
             str(phase_processing), str(data_path), "1", "-", str(streams), str(cores), "0", "-1"
         ]
+        
 
-        self._run(preprocess_cmd, "Preprocessing (all activities)", cwd=str(base))
-        self._run(hest_cmd, "H-estimation (all activities)", cwd=str(base))
 
         # Where final .mat should go (one folder per dataset subdir)
         out_dir = Path(self.phase_output_input.text()) / subdir
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # ---- Step 2: per-activity reconstruction on filtered traces ----
-        activities = ["E", "H", "L", "R", "W"]
-        short_subdir = subdir.replace("-", "")
+        # activities = ["E", "H", "L", "R", "W"]
+        # short_subdir = subdir.replace("-", "")
 
-        for act in activities:
-            pat = f"Tr_vector_{short_subdir}_{act}_stream_*.txt"
-            matches = sorted((phase_processing).glob(pat))
-            if not matches:
-                self.status_label.setText(
-                    f"No traces found for {subdir} {act} in {phase_processing}. Skipping.")
-                continue
+        # for act in activities:
+        #     pat = f"Tr_vector_{short_subdir}_{act}_stream_*.txt"
+        #     matches = sorted((phase_processing).glob(pat))
+        #     if not matches:
+        #         self.status_label.setText(
+        #             f"No traces found for {subdir} {act} in {phase_processing}. Skipping.")
+        #         continue
 
-            tmp_in = phase_processing / f"_tmp_{subdir}_{act}"
-            if tmp_in.exists():
-                shutil.rmtree(tmp_in)
-            tmp_in.mkdir(parents=True, exist_ok=True)
+        #     tmp_in = phase_processing / f"_tmp_{subdir}_{act}"
+        #     if tmp_in.exists():
+        #         shutil.rmtree(tmp_in)
+        #     tmp_in.mkdir(parents=True, exist_ok=True)
 
-            for m in matches:
-                shutil.copy2(m, tmp_in / m.name)
+        #     for m in matches:
+        #         shutil.copy2(m, tmp_in / m.name)
 
-            recon_cmd = [
-                sys.executable,
-                str(base / "CSI_phase_sanitization_signal_reconstruction.py"),
-                str(tmp_in),
-                str(out_dir),
-                str(streams), str(cores), "0", "-1"
-            ]
-            self._run(recon_cmd, f"Reconstruction ({act})", cwd=str(base))
+        #     recon_cmd = [
+        #         sys.executable,
+        #         str(base / "CSI_phase_sanitization_signal_reconstruction.py"),
+        #         str(tmp_in),
+        #         # str(out_dir),
+        #         str(streams), str(cores), "0", "-1"
+        #     ]
+        #     self._run(recon_cmd, f"Reconstruction ({act})", cwd=str(base))
 
-            shutil.rmtree(tmp_in, ignore_errors=True)
+        #     shutil.rmtree(tmp_in, ignore_errors=True)
+        
+        recon_cmd = [
+            sys.executable,
+            str(base / "CSI_phase_sanitization_signal_reconstruction.py"),
+            str(""),
+            str(out_dir),
+            str(streams), str(cores), "0", "-1"
+        ]
+        def run_phase_pipeline():
+            self.signals.progress_text.emit(f"Running: {' '.join(preprocess_cmd)}")
+            self._run(preprocess_cmd, "Preprocessing (all activities)", str(base))
+            self.signals.progress_text.emit(f"Running: {' '.join(hest_cmd)}")
+            self._run(hest_cmd, "H-estimation (all activities)", str(base))
+            self.signals.progress_text.emit(f"Running: {' '.join(recon_cmd)}")
+            self._run(recon_cmd, f"Reconstruction signal", cwd=str(base))
+
+
+        threading.Thread(target=run_phase_pipeline, daemon=True).start()
 
         self.status_label.setText(
             f"Phase sanitization complete. Output: {out_dir}")

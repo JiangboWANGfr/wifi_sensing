@@ -19,9 +19,12 @@ import numpy as np
 import scipy.io as sio
 from os import listdir
 import pickle
+import os
 from os import path
 import scipy.io as sio
 import numpy as np
+
+from utils.results_path import *
 
 
 def hampel_filter(input_matrix, window_size, n_sigmas=3):
@@ -42,7 +45,7 @@ def hampel_filter(input_matrix, window_size, n_sigmas=3):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('output_dir', help='Output directory for processed files')
+    parser.add_argument('result_dir', help='Output directory for processed files')
     parser.add_argument('dir', help='Directory of data')
     parser.add_argument('all_dir', help='All the files in the directory, default no', type=int, default=0)
     parser.add_argument('name', help='Name of experiment file')
@@ -52,6 +55,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     exp_dir = args.dir
+    result_dir = get_signal_preprocessing_result_dir(args)
     names = []
 
     if args.all_dir:
@@ -65,12 +69,14 @@ if __name__ == '__main__':
 
     print('Processing files:', names)
     for name in names:
-        name_file = args.output_dir + '/signal_' + name + '.txt'
+        
+        name_file = result_dir + '/signal_' + name + '.txt'
         if path.exists(name_file):
             print('Already processed')
             continue
 
         csi_buff_file = exp_dir + name + ".mat"
+        print('Loading file:', csi_buff_file)
         csi_buff = sio.loadmat(csi_buff_file)
         csi_buff = (csi_buff['csi_buff'])
         csi_buff = np.fft.fftshift(csi_buff, axes=1)
@@ -98,6 +104,6 @@ if __name__ == '__main__':
 
             signal_complete[:, :, stream] = H_m.T
 
-        name_file = args.output_dir + '/signal_' + name + '.txt'
+        name_file = result_dir + '/signal_' + name + '.txt'
         with open(name_file, "wb") as fp:  # Pickling
             pickle.dump(signal_complete, fp)

@@ -21,10 +21,11 @@ from os import listdir, path
 import pickle
 import math as mt
 import os
-
+from utils.results_path import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('result_dir', help='Directory to save results')
     parser.add_argument('dir', help='Directory of data')
     parser.add_argument('dir_save', help='Directory to save processed data')
     parser.add_argument('nss', help='Number of spatial streams', type=int)
@@ -33,8 +34,9 @@ if __name__ == '__main__':
     parser.add_argument('end_idx', help='End index from the end', type=int)
     args = parser.parse_args()
 
-    exp_dir = args.dir
-    save_dir = args.dir_save
+    # exp_dir = args.dir
+    exp_dir = get_h_estimation_result_dir(args)
+    save_dir = get_signal_reconstruction_result_dir(args)
     names = []
 
     all_files = listdir(exp_dir)
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     for name in names:
         name_f = name[10:] + '.mat'
         stop = False
-        sub_dir_name = name_f[0:3]
+        sub_dir_name = name_f[0:3] # S1a ... the folder's name
         subdir_path = save_dir + sub_dir_name
 
         complete_path = subdir_path + '/' + name_f
