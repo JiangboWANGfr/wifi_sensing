@@ -147,12 +147,10 @@ class SHARPPipelineApp(QMainWindow):
         s.addWidget(self.progress_bar)
 
         # Pipeline buttons
-        self._pipeline_button(s, "1. Run Phase Sanitization",
-                              self.run_phase_sanitization)
-        self._pipeline_button(s, "2. Run Doppler Computation",
-                              self.run_doppler_computation)
-        self._pipeline_button(
-            s, "3. Create Dataset (Train)", self.run_create_datasets)
+        self._pipeline_button(s, "1. Run Phase Sanitization", self.run_phase_sanitization)
+        self._pipeline_button(s, "1.1 Plot Phase Information", self.plot_phase_information)
+        self._pipeline_button(s, "2. Run Doppler Computation", self.run_doppler_computation)
+        self._pipeline_button(s, "3. Create Dataset (Train)", self.run_create_datasets)
         self._pipeline_button(s, "4. Train HAR Model", self.run_train_model)
 
         # Right panel: live output log
@@ -412,7 +410,7 @@ class SHARPPipelineApp(QMainWindow):
             self.signals.progress_text.emit(f"Running: {' '.join(hest_cmd)}")
             self._run(hest_cmd, "H-estimation (all activities)", str(base))
             self.signals.progress_text.emit(f"Running: {' '.join(recon_cmd)}")
-            self._run(recon_cmd, f"Reconstruction signal", cwd=str(base))
+            # self._run(recon_cmd, f"Reconstruction signal", cwd=str(base))
 
 
         threading.Thread(target=run_phase_pipeline, daemon=True).start()
@@ -420,6 +418,13 @@ class SHARPPipelineApp(QMainWindow):
         self.status_label.setText(
             f"Phase sanitization complete. Output: {out_dir}")
 
+    def plot_phase_information(self):
+        base = Path(self.python_code_folder_input.text())
+        out_phase_root = Path(self.phase_output_input.text())
+        subdir = self.subdir_current or ""
+
+        pass
+        
     def run_doppler_computation(self):
         base = Path(self.python_code_folder_input.text())  # code/src
         out_phase_root = Path(self.phase_output_input.text())

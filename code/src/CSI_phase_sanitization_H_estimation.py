@@ -22,6 +22,8 @@ from utils.plots_utility import *
 import os 
 
 from utils.results_path import *
+import time
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -50,7 +52,8 @@ if __name__ == '__main__':
                 names.append(all_files[i][:-4])
     else:
         names.append(args.name)
-
+    time_spent = 0  
+    start_time = time.time()  # record the start time
     for idx_name, name in enumerate(names, start=1):
         name_file = input_signal_dir + '/signal_' + name + '.txt'
         with open(name_file, "rb") as fp:  # Pickling
@@ -114,15 +117,32 @@ if __name__ == '__main__':
         zeros_nm_matr = np.zeros(n + m)
 
         for stream in range(0, 4):
+            
+#=================================== change start ====================================
+            # if the result exists skip
+            r_name_file = result_dir + '/r_vector_' + name + '_stream_' + str(stream) + '.txt'
+            max_len = max(len(n) for n in names)
+            if path.exists(r_name_file):
+                print(f"Skipping: R Result exists for {name:<{max_len}}")
+                continue
+            #if the result exists skip
+            tr_name_file = result_dir + '/Tr_vector_' + name + '_stream_' + str(stream) + '.txt'
+            if path.exists(tr_name_file):
+                print(f"Skipping: Tr Result exists for {name:<{max_len}}")
+                continue
+#==================================== change end ====================================
             name_file = result_dir + '/r_vector_' + name + '_stream_' + str(stream) + '.txt'
             signal_considered = signal_complete[:, start_r:end_r, stream]
             r_optim = np.zeros((r_length, end_r - start_r), dtype=complex)
             Tr_matrix = np.zeros((frequency_vector_complete.shape[0], end_r - start_r), dtype=complex)
 
             for time_step in range(end_r - start_r):
+#=================================== change start ====================================
                 if time_step % 100 == 0:
+                    elapsed = time.time() - start_time
                     print(
-                        f'{name} {idx_name}/{len(names)}: Processing time step {time_step + 1} / {end_r - start_r} for stream {stream+1} / 4', flush=True)
+                        f'{name} {idx_name}/{len(names)}: Processing time step {time_step + 1} / {end_r - start_r} for stream {stream+1} / 4, elapsed time: {elapsed:.2f} seconds', flush=True)
+#=================================== change end ======================================
                 signal_time = signal_considered[:, time_step]
                 complex_opt_r = lasso_regression_osqp_fast(signal_time, T_matrix, select_subcarriers, row_T, col_T,
                                                            Im, Onm, P, q, A2, A3, ones_n_matr, zeros_n_matr,

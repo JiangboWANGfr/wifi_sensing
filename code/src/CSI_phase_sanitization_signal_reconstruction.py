@@ -45,6 +45,7 @@ if __name__ == '__main__':
             names.append(all_files[i][:-4])
 
     for name in names:
+        print("reconstructing:", name, end=' ')
         name_f = name[10:] + '.mat'
         stop = False
         sub_dir_name = name_f[0:3] # S1a ... the folder's name
