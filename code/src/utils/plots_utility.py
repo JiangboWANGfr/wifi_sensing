@@ -184,38 +184,54 @@ def plt_doppler_antennas(doppler_spectrum_list, sliding_lenght, delta_v, name_pl
 
 
 def plt_confusion_matrix(number_activities, confusion_matrix, activities, name):
-    confusion_matrix_normaliz_row = np.transpose(confusion_matrix / np.sum(confusion_matrix, axis=1).reshape(-1, 1))
-    fig = plt.figure(constrained_layout=True)
-    fig.set_size_inches(5.5, 4)
-    ax = fig.add_axes((0.18, 0.15, 0.6, 0.8))
-    im1 = ax.pcolor(np.linspace(0.5, number_activities + 0.5, number_activities + 1),
-                    np.linspace(0.5, number_activities + 0.5, number_activities + 1),
-                    confusion_matrix_normaliz_row, cmap='Blues', edgecolors='black', vmin=0, vmax=1)
-    ax.set_xlabel('Actual activity', FontSize=18)
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    # 行归一化，避免 0 除
+    conf = np.asarray(confusion_matrix, dtype=float)
+    row_sums = conf.sum(axis=1, keepdims=True)
+    conf_norm_row = np.divide(conf, row_sums,
+                              out=np.zeros_like(conf, dtype=float),
+                              where=row_sums != 0).T  # 保持你原来的转置
+
+    # 用 constrained_layout 管理一切
+    fig, ax = plt.subplots(figsize=(5.5, 4), constrained_layout=True)
+
+    xx = np.linspace(0.5, number_activities + 0.5, number_activities + 1)
+    im = ax.pcolor(xx, xx, conf_norm_row, cmap='Blues',
+                   edgecolors='black', vmin=0, vmax=1)
+
+    ax.set_xlabel('Actual activity', fontsize=18)
     ax.set_xticks(np.linspace(1, number_activities, number_activities))
-    ax.set_xticklabels(labels=activities, FontSize=18)
+    ax.set_xticklabels(labels=activities, fontsize=18)
     ax.set_yticks(np.linspace(1, number_activities, number_activities))
-    ax.set_yticklabels(labels=activities, FontSize=18, rotation=45)
-    ax.set_ylabel('Predicted activity', FontSize=18)
+    ax.set_yticklabels(labels=activities, fontsize=18, rotation=45)
+    ax.set_ylabel('Predicted activity', fontsize=18)
 
-    for x_ax in range(confusion_matrix_normaliz_row.shape[0]):
-        for y_ax in range(confusion_matrix_normaliz_row.shape[1]):
-            col = 'k'
-            value_c = round(confusion_matrix_normaliz_row[x_ax, y_ax], 2)
-            if value_c > 0.6:
-                col = 'w'
-            if value_c > 0:
-                ax.text(y_ax + 1, x_ax + 1, '%.2f' % value_c, horizontalalignment='center',
-                        verticalalignment='center', fontsize=16, color=col)
+    # 在格子里写数值
+    for x_ax in range(conf_norm_row.shape[0]):
+        for y_ax in range(conf_norm_row.shape[1]):
+            val = round(conf_norm_row[x_ax, y_ax], 2)
+            if val > 0:
+                col = 'w' if val > 0.6 else 'k'
+                ax.text(y_ax + 1, x_ax + 1, f'{val:.2f}',
+                        ha='center', va='center', fontsize=16, color=col)
 
-    cbar_ax = fig.add_axes([0.83, 0.15, 0.03, 0.8])
-    cbar = fig.colorbar(im1, cax=cbar_ax)
-    cbar.ax.set_ylabel('Accuracy', FontSize=18)
+    # 让布局引擎放置 colorbar（不要 add_axes）
+    cbar = fig.colorbar(im, ax=ax, pad=0.02)
+    cbar.ax.set_ylabel('Accuracy', fontsize=18)
     cbar.ax.tick_params(axis="y", labelsize=16)
+    import os 
+    #当前文件路径
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    outputpath = f"{current_path}/../../../results/matrix/"
+    if not os.path.exists(outputpath):
+        os.makedirs(outputpath)
+    outputname = outputpath + 'cm_' + name + '.pdf'
+    print(f"Saving confusion matrix to {outputname}")
+    fig.savefig(outputname, bbox_inches='tight')
 
-    plt.tight_layout()
-    name_fig = './plots/cm_' + name + '.pdf'
-    plt.savefig(name_fig)
+
 
 
 def plt_doppler_activities(doppler_spectrum_list, antenna, csi_label_dict, sliding_lenght, delta_v, name_plot):

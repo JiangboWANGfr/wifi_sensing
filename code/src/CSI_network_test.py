@@ -24,6 +24,10 @@ from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import tensorflow as tf
 
+import warnings
+from sklearn.exceptions import UndefinedMetricWarning
+warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -56,7 +60,8 @@ if __name__ == '__main__':
 
     suffix = '.txt'
 
-    name_base = args.name_base
+    output_cache_path = args.dir + "../outputs/cache/"
+    name_base = output_cache_path + args.name_base
     if os.path.exists(name_base + '_' + str(csi_act) + '_cache_complete.data-00000-of-00001'):
         os.remove(name_base + '_' + str(csi_act) + '_cache_complete.data-00000-of-00001')
         os.remove(name_base + '_' + str(csi_act) + '_cache_complete.index')
@@ -140,7 +145,7 @@ if __name__ == '__main__':
             lab_max_merge = lab_unique[0]
         pred_max_merge[i_lab] = lab_max_merge
 
-    conf_matrix_max_merge = confusion_matrix(labels_true_merge, pred_max_merge, labels_considered)
+    conf_matrix_max_merge = confusion_matrix(labels_true_merge, pred_max_merge, labels=labels_considered)
     precision_max_merge, recall_max_merge, fscore_max_merge, _ = \
         precision_recall_fscore_support(labels_true_merge, pred_max_merge, labels=labels_considered)
     accuracy_max_merge = accuracy_score(labels_true_merge, pred_max_merge)
@@ -156,7 +161,7 @@ if __name__ == '__main__':
                            'recall_max_merge': recall_max_merge,
                            'fscore_max_merge': fscore_max_merge}
 
-    name_file = './outputs/complete_different_' + str(csi_act) + '_' + subdirs_complete + '_band_' + str(bandwidth) \
+    name_file = args.dir + '../outputs/complete_different_' + str(csi_act) + '_' + subdirs_complete + '_band_' + str(bandwidth) \
                 + '_subband_' + str(sub_band) + suffix
     with open(name_file, "wb") as fp:  # Pickling
         pickle.dump(metrics_matrix_dict, fp)
@@ -214,7 +219,7 @@ if __name__ == '__main__':
     metrics_matrix_dict = {'average_accuracy_change_num_ant': average_accuracy_change_num_ant,
                            'average_fscore_change_num_ant': average_fscore_change_num_ant}
 
-    name_file = './outputs/change_number_antennas_complete_different_' + str(csi_act) + '_' + subdirs_complete + \
+    name_file = args.dir + '../outputs/change_number_antennas_complete_different_' + str(csi_act) + '_' + subdirs_complete + \
                 '_band_' + str(bandwidth) + '_subband_' + str(sub_band) + '.txt'
     with open(name_file, "wb") as fp:  # Pickling
         pickle.dump(metrics_matrix_dict, fp)

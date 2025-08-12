@@ -127,9 +127,9 @@ class SHARPPipelineApp(QMainWindow):
         s.addWidget(self.streams_input)
 
         self.cores_input = QSpinBox()
-        physical_cores = psutil.cpu_count(logical=False) or 1
+        self.physical_cores = psutil.cpu_count(logical=False) or 1
         self.cores_input.setMinimum(1)
-        self.cores_input.setValue(physical_cores)
+        self.cores_input.setValue(self.physical_cores)
         s.addWidget(QLabel("Number of CPU Cores:"))
         s.addWidget(self.cores_input)
 
@@ -154,6 +154,7 @@ class SHARPPipelineApp(QMainWindow):
         self._pipeline_button(s, "2.5 Plot Doppler Information", self.plot_doppler_information)
         self._pipeline_button(s, "3. Create Dataset (Train)", self.run_create_datasets)
         self._pipeline_button(s, "4. Train HAR Model", self.run_train_model)
+        self._pipeline_button(s, "4.5 Plot Matrix Information", self.plot_matrix_information)
 
         # Right panel: live output log
         right = QWidget()
@@ -507,7 +508,7 @@ class SHARPPipelineApp(QMainWindow):
         cmd = [
             sys.executable,
             str(base / "CSI_doppler_create_dataset_train.py"),
-            str(doppler_root)+'/', subdir, "31", "1", "340", "30", "E,L,W,R,J1,J2", "4"
+            str(doppler_root)+'/', subdir, "31", "1", "340", "30", "E,L,W,R,J1,J2", '4',
         ]
 
         def worker():
@@ -544,6 +545,90 @@ class SHARPPipelineApp(QMainWindow):
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def plot_matrix_information(self):
+        base = Path(self.python_code_folder_input.text())
+        doppler_root = Path(self.doppler_output_input.text())
+        subdir = self.subdir_current or ""
+        if not doppler_root.exists():
+            QMessageBox.critical(
+                self, "Error", f"Doppler path does not exist:\n{doppler_root}")
+            return
+# Use the trained algorithm for inference
+
+# - Run the algorithm with the test data
+
+# ```bash
+# python CSI_network_test.py < 'directory of the datasets' > <'sub-directories, comma-separated' > <'length along the feature dimension (height)' > <'length along the time dimension (width)' > <'number of channels' > <'number of samples in a batch' > <'name prefix for the files' > <'activities to be considered, comma-separated' > <--bandwidth 'bandwidth' > <--sub-band 'index of the sub-band to consider (for 20 MHz and 40 MHz)' >
+# ```
+
+# e.g., python CSI_network_test.py ./doppler_traces / S7a 100 340 1 32 4 single_ant E, L, W, R, J
+
+# - Compute the performance metrics using the output file of the test
+
+# ```bash
+# python CSI_network_metrics.py < 'name of the output file containing the metrics' > <'activities to be considered, comma-separated' >
+# ```
+
+# e.g., python CSI_network_metrics.py complete_different_E, L, W, R, J_S7a_band_80_subband_1 E, L, W, R, J
+
+# - Plot the performance metrics
+
+# ```bash
+# python CSI_network_metrics_plot.py < 'sub-directories, comma-separated' >
+# ```
+
+# e.g., python CSI_network_metrics_plot.py complete_different_E, L, W, R, J_S7a_band_80_subband_1 E, L, W, R, J
+
+        cmd_dataset_test = [
+            sys.executable,
+            str(base / "CSI_doppler_create_dataset_test.py"),
+            str(doppler_root)+'/', subdir, "31", "1", "340", "30", "E,L,W,R,J1,J2", '4',
+        ]
+        cmd_test = [
+            sys.executable,
+            str(base / "CSI_network_test.py"),
+            str(doppler_root)+'/', subdir, "100", "340", "1", "32", '4',
+            "single_ant", "E,L,W,R,J1,J2"
+        ]
+        cmd_metrics = [
+            sys.executable,
+            str(base / "CSI_network_metrics.py"),
+            str(doppler_root) +
+            '/', "complete_different_E,L,W,R,J1,J2_S1a_band_80_subband_1", "E,L,W,R,J1,J2"
+        ]
+        cmd_plot = [
+            sys.executable,
+            str(base / "CSI_network_metrics_plot.py"),
+            str(doppler_root) +
+            '/', "complete_different_E,L,W,R,J1,J2_S1a_band_80_subband_1", "E,L,W,R,J1,J2"
+        ]
+
+        def worker():
+            self.signals.progress_text.emit("Creating dataset...")
+            self.signals.progress_value.emit(0)
+            self._run(cmd_dataset_test, "Creating Dataset", cwd=str(base))
+            self.signals.progress_text.emit("Creating complete.")
+            self.signals.progress_value.emit(10)
+
+            self.signals.progress_text.emit("Running model test...")
+            self.signals.progress_value.emit(40)
+            self._run(cmd_test, "Running Model Test", cwd=str(base))
+            self.signals.progress_text.emit("Running complete.")
+            self.signals.progress_value.emit(60)
+
+            self.signals.progress_text.emit("Computing metrics...")
+            self.signals.progress_value.emit(70)
+            self._run(cmd_metrics, "Computing Metrics", cwd=str(base))
+            self.signals.progress_text.emit("Computing complete.")
+            self.signals.progress_value.emit(80)
+
+            self.signals.progress_text.emit("Plotting metrics...")
+            self.signals.progress_value.emit(90)
+            self._run(cmd_plot, "Plotting Metrics", cwd=str(base))
+            self.signals.progress_text.emit("Plotting complete.")
+            self.signals.progress_value.emit(100)
+
+        threading.Thread(target=worker, daemon=True).start()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

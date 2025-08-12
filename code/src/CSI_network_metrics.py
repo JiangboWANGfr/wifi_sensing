@@ -17,10 +17,11 @@
 import argparse
 import numpy as np
 import pickle
-
+import os
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('dir', help='Directory of data')
     parser.add_argument('name_file', help='Name of the file')
     parser.add_argument('activities', help='Activities to be considered')
     args = parser.parse_args()
@@ -32,7 +33,7 @@ if __name__ == '__main__':
         activities.append(lab_act)
     activities = np.asarray(activities)
 
-    folder_name = './outputs/'
+    folder_name = args.dir + '../outputs/'
 
     name_file = folder_name + name_file + '.txt'
 
